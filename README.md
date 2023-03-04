@@ -36,7 +36,7 @@ and open the `report.html` file dashboard in your local browser.
 
 ### Findings 
 
-|                | Runtime Condition | Nginx Impact    | Upstream State                                               |
-|----------------|-------------------|-----------------|--------------------------------------------------------------|
-| No socket file | No socket file    | 502 Bad Gateway | No upstream server exists. No socket on the host filesystem. |
-|                |                   |                 |                                                              |
+|                 | Runtime Condition                                                                   | Nginx Impact                                                                                         | Upstream State                                                             |
+|-----------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| No socket file  | No socket file                                                                      | 502 Bad Gateway                                                                                      | No upstream server exists. No socket on the host filesystem.               |
+| bad-server-unix | A unix domain socket server is running, but no longer will accept() new connections | Clients hang on server response until timeout, ` accept4() failed (24: Too many open files)` in logs | Unix domain socket server is established, but no connections are accepted. |

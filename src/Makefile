@@ -26,8 +26,9 @@ compile:  ## Compile local code
 	@echo "  ->  Compile upstream"
 	${CC} basic-server-tcp.c -o upstream-basic-server-tcp
 	${CC} basic-server-unix.c -o upstream-basic-server-unix
+	${CC} bad-server-unix.c -o upstream-bad-server-unix
 	@echo "  ->  Compile okay!"
 
 .PHONY: help
 help:  ## Show help messages for make targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {//printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'

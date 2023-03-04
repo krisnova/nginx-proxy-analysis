@@ -1,4 +1,0 @@
-#!/bin/bash
-
-echo " --> Starting upstream server"
-./src/upstream-basic-server-unix

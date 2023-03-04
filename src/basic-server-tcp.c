@@ -43,7 +43,7 @@ int main() {
     perror("webserver (socket)");
     return 1;
   }
-  printf("socket created successfully\n");
+  //printf("socket created successfully\n");
 
   // Create the address to bind the socket to
   struct sockaddr_in host_addr;
@@ -62,14 +62,14 @@ int main() {
     perror("webserver (bind)");
     return 1;
   }
-  printf("socket successfully bound to address\n");
+  //printf("socket successfully bound to address\n");
 
   // Listen for incoming connections
   if (listen(sockfd, SOMAXCONN) != 0) {
     perror("webserver (listen)");
     return 1;
   }
-  printf("server listening for connections\n");
+  //printf("server listening for connections\n");
 
   for (;;) {
     // Accept incoming connections
@@ -79,7 +79,7 @@ int main() {
       perror("webserver (accept)");
       continue;
     }
-    printf("connection accepted\n");
+    //printf("connection accepted\n");
 
     // Get client address
     int sockn = getsockname(newsockfd, (struct sockaddr *)&client_addr,
@@ -99,8 +99,8 @@ int main() {
     // Read the request
     char method[BUFFER_SIZE], uri[BUFFER_SIZE], version[BUFFER_SIZE];
     sscanf(buffer, "%s %s %s", method, uri, version);
-    printf("[%s:%u] %s %s %s\n", inet_ntoa(client_addr.sin_addr),
-           ntohs(client_addr.sin_port), method, version, uri);
+//    printf("[%s:%u] %s %s %s\n", inet_ntoa(client_addr.sin_addr),
+//           ntohs(client_addr.sin_port), method, version, uri);
 
     // Write to the socket
     int valwrite = write(newsockfd, resp, strlen(resp));
