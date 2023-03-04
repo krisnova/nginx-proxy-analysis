@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Clear the logs
+echo " --> Clearing existing logs"
+rm -vrf /var/log/nginx-proxy-analysis/*
+
+# Create new logs
+mkdir -p /var/log/nginx-proxy-analysis
+touch /var/log/nginx-proxy-analysis/error.log
+touch /var/log/nginx-proxy-analysis/access.log
+
+# Upstream
+echo " --> Launching upstream server [sock-listen]..."
+./cases/sock-listen &
+
+# Dashboard
+echo " --> Launching GoAccess dashboard..."
+./dashboard &
+
+echo " --> Launching proxy server..."
+./proxy
+
+# Exit
+echo ""
+pkill -f -9 nginx
+pkill -f -9 goaccess
+echo ""
+echo "Finished." 
+exit 0

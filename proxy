@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo " --> Starting nginx reverse proxy"
+
+nginx \
+  -c $(pwd)/etc/nginx.conf
+
+# TODO 

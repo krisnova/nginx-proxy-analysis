@@ -1,0 +1,9 @@
+#!/bin/bash
+
+echo " --> Starting GoAccess Dashboard"
+
+goaccess \
+  -p ./etc/goaccess.conf \
+  -o report.html \
+  --real-time-html \
+  /var/log/nginx-proxy-analysis/access.log
