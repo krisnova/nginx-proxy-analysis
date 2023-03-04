@@ -32,8 +32,7 @@ Run the dashboard
 ./dashboard
 ```
 
-and open the `report.html` file dashboard in your local browser. 
-
+and open the `report.html` file dashboard in your local browser.
 
 ### Findings 
 
@@ -41,6 +40,3 @@ and open the `report.html` file dashboard in your local browser.
 |----------------|-------------------|-----------------|--------------------------------------------------------------|
 | No socket file | No socket file    | 502 Bad Gateway | No upstream server exists. No socket on the host filesystem. |
 |                |                   |                 |                                                              |
-
-
-

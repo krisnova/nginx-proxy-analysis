@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright © 2022 Kris Nóva <nova@nivenly.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo " --> Starting nginx reverse proxy"
+CC       = clang
 
-nginx \
-  -c $(pwd)/etc/nginx.conf
+default: compile ## Default to compile
 
-# TODO 
+.PHONY: clean
+clean: ## Clean objects
+	rm -vf upstream-*
+	rm -vf *.o
+	rm -vf *.ll
+
+compile:  ## Compile local code
+	@echo "  ->  Compile upstream"
+	${CC} basic-server-tcp.c -o upstream-basic-server-tcp
+	@echo "  ->  Compile okay!"
+
+.PHONY: help
+help:  ## Show help messages for make targets
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
