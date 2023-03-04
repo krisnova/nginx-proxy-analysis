@@ -25,6 +25,7 @@ clean: ## Clean objects
 compile:  ## Compile local code
 	@echo "  ->  Compile upstream"
 	${CC} basic-server-tcp.c -o upstream-basic-server-tcp
+	${CC} basic-server-unix.c -o upstream-basic-server-unix
 	@echo "  ->  Compile okay!"
 
 .PHONY: help

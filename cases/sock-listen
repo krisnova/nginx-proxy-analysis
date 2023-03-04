@@ -1,4 +1,0 @@
-#!/bin/bash
-
-echo " --> Starting sock-listen upstream server"
-# TODO 

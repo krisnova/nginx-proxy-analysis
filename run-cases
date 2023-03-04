@@ -23,8 +23,8 @@ touch /var/log/nginx-proxy-analysis/error.log
 touch /var/log/nginx-proxy-analysis/access.log
 
 # Upstream
-echo " --> Launching upstream server [sock-listen]..."
-./cases/sock-listen &
+echo " --> Launching upstream server [basic-socket-unix]..."
+./cases/basic-socket-unix &
 
 # Dashboard
 echo " --> Launching GoAccess dashboard..."
