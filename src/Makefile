@@ -26,7 +26,7 @@ compile:  ## Compile local code
 	@echo "  ->  Compile upstream"
 	${CC} basic-server-tcp.c -o upstream-basic-server-tcp
 	${CC} basic-server-unix.c -o upstream-basic-server-unix
-	${CC} bad-server-unix.c -o upstream-bad-server-unix
+	${CC} server-not-accept-unix.c -o upstream-server-not-accept-unix
 	@echo "  ->  Compile okay!"
 
 .PHONY: help

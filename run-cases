@@ -47,10 +47,6 @@ rm -rf /var/log/nginx-proxy-analysis/* # Clear the dashboard data
 mkdir -p /var/log/nginx-proxy-analysis
 touch /var/log/nginx-proxy-analysis/error.log
 touch /var/log/nginx-proxy-analysis/access.log
-#pkill -f -9 upstream-bad-socket-unix
-#pkill -f -9 upstream-basic-socket-unix
-#pkill -f -9 nginx
-
 
 # Load the Dashboard
 echo " --> [Test] GoAccess dashboard..."
@@ -81,9 +77,9 @@ pkill -f -9 upstream-basic-server-unix
 # ===========================================================================
 # Upstream Case (Sad Path)
 echo " --> [Case: sad] Launching upstream server [basic-socket-unix]..."
-./src/upstream-bad-server-unix &
+./src/upstream-server-not-accept-unix &
 echo "-------------------------------"
-echo "upstream-bad-server-unix"
+echo "upstream-server-not-accept-unix"
 echo "PID $!"
 echo "-------------------------------"
 ./traffic
