@@ -61,8 +61,7 @@ sleep 1
 
 
 # ===========================================================================
-# Upstream Case (Happy Path)
-echo " --> [Case: happy] Launching upstream server [basic-socket-unix]..."
+echo " --> Case: Server works as expected, always returns HTTP 200"
 ./src/upstream-basic-server-unix &
 CASEPID=$!
 echo "-------------------------------"
@@ -76,12 +75,25 @@ kill -9 $CASEPID
 
 
 # ===========================================================================
-# Upstream Case (Sad Path)
-echo " --> [Case: sad] Launching upstream server [basic-socket-unix]..."
+echo " --> Case: Server create socket, but does not call accept()"
 ./src/upstream-server-not-accept-unix &
 CASEPID=$!
 echo "-------------------------------"
 echo "upstream-server-not-accept-unix"
+echo "PID $CASEPID"
+echo "-------------------------------"
+./traffic
+read -p "Press any key to continue"
+kill -9 $CASEPID
+# ===========================================================================
+
+
+# ===========================================================================
+echo " --> Case: Server create socket, call accept(), but does not call read()"
+./src/upstream-server-accept-not-read-unix &
+CASEPID=$!
+echo "-------------------------------"
+echo "upstream-server-accept-not-read-unix"
 echo "PID $CASEPID"
 echo "-------------------------------"
 ./traffic
