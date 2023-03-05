@@ -23,7 +23,7 @@ Linux 6.1.12-arch1-1
 
 Ensure the following dependencies are on the current filesystem:
 
- - `goacess`
+ - `goaccess`
  - `nginx` (complete with stub_status and http_status modules)
 
 Run the dashboard
