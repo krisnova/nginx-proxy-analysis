@@ -12,13 +12,45 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
+
+# Check if running as root user
+if [ "$EUID" -ne 0 ]; then
+  echo ""
+  echo "--------------------"
+  echo "Permission denied."
+  echo "--------------------"
+  echo ""
+  echo "Please run as privileged user ID 0 (Root user, with sudo)."
+  echo ""
+  exit
+fi
+
+FILE=./src/upstream-basic-server-tcp
+if [ -f "$FILE" ]; then
+  echo "Compile check passeed."
+else
+    echo ""
+    echo "--------------------"
+    echo "Missing executable."
+    echo "--------------------"
+    echo ""
+    echo "Please run 'make upstream' to build the servers to test against."
+    echo ""
+    exit
+  exit
+fi
 
 # Initialize the test
 echo " --> [Test] Clearing existing logs"
-rm -vrf /var/log/nginx-proxy-analysis/*
+rm -rf /var/log/nginx-proxy-analysis/* # Clear the dashboard data
 mkdir -p /var/log/nginx-proxy-analysis
 touch /var/log/nginx-proxy-analysis/error.log
 touch /var/log/nginx-proxy-analysis/access.log
+#pkill -f -9 upstream-bad-socket-unix
+#pkill -f -9 upstream-basic-socket-unix
+#pkill -f -9 nginx
+
 
 # Load the Dashboard
 echo " --> [Test] GoAccess dashboard..."
@@ -27,27 +59,38 @@ echo " --> [Test] GoAccess dashboard..."
 # Load the Proxy server
 echo " --> [Test] Launching proxy server..."
 ./proxy &
-sleep 1
-NGINX_PID=$(pgrep nginx | head -1) # The worker holds the connections
 
+# Wait for the services to start
+sleep 1
+
+
+# ===========================================================================
 # Upstream Case (Happy Path)
 echo " --> [Case: happy] Launching upstream server [basic-socket-unix]..."
-./cases/basic-server-unix &
-./stats $NGINX_PID
+./src/upstream-basic-server-unix &
+echo "-------------------------------"
+echo "upstream-basic-server-unix"
+echo "PID $!"
+echo "-------------------------------"
 ./traffic
-./stats $NGINX_PID
 read -p "Press any key to continue"
-pkill -f -9 basic-server-unix
+pkill -f -9 upstream-basic-server-unix
+# ===========================================================================
 
+
+# ===========================================================================
 # Upstream Case (Sad Path)
 echo " --> [Case: sad] Launching upstream server [basic-socket-unix]..."
-./cases/bad-server-unix &
-C2=$(pgrep C2 | head -1)
-./stats $NGINX_PID
+./src/upstream-bad-server-unix &
+echo "-------------------------------"
+echo "upstream-bad-server-unix"
+echo "PID $!"
+echo "-------------------------------"
 ./traffic
-./stats $NGINX_PID
 read -p "Press any key to continue"
-pkill -f -9 bad-socket-unix
+pkill -f -9 upstream-bad-socket-unix
+# ===========================================================================
+
 
 # Exit
 echo ""

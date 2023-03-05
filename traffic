@@ -14,10 +14,13 @@
 # limitations under the License.
 
 # Perform a task a given number of times
-echo "  --> Sending 10000 requests to localhost:80"
-for i in {1..10000}
+echo "  --> Sending 100 requests to localhost:80"
+for i in {1..100}
 do
  printf "."
  curl -o /dev/null --header "Connection: keep-alive" --silent localhost:80 & # Note: this must match the nginx.conf listen directive
+ # See socket states in README
+ state=$(cat /proc/net/unix | grep nginx-proxy-analysis | cut -d " " -f 6)
+ printf "$state"
 done
 echo ""

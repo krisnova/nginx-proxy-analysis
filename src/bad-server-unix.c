@@ -22,6 +22,7 @@
 // Taken from original source: https://bruinsslot.jp/post/simple-http-webserver-in-c/ © 2022 J.P.H. Bruins Slot
 
 #include <arpa/inet.h>
+
 #include <sys/un.h>
 #include <stdio.h>
 #include <string.h>

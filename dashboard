@@ -19,4 +19,5 @@ goaccess \
   -p ./etc/goaccess.conf \
   -o report.html \
   --real-time-html \
+  -l /var/log/nginx-proxy-analysis/dashboard.log \
   /var/log/nginx-proxy-analysis/access.log

@@ -1,3 +1,0 @@
-#!/bin/bash
-echo " --> Starting upstream server"
-LABEL=C1 ./src/upstream-basic-server-unix

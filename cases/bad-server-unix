@@ -1,3 +1,0 @@
-#!/bin/bash
-echo " --> Starting upstream server"
-LABEL=C2 ./src/upstream-bad-server-unix
