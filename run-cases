@@ -64,13 +64,14 @@ sleep 1
 # Upstream Case (Happy Path)
 echo " --> [Case: happy] Launching upstream server [basic-socket-unix]..."
 ./src/upstream-basic-server-unix &
+CASEPID=$!
 echo "-------------------------------"
 echo "upstream-basic-server-unix"
-echo "PID $!"
+echo "PID $CASEPID"
 echo "-------------------------------"
 ./traffic
 read -p "Press any key to continue"
-pkill -f -9 upstream-basic-server-unix
+kill -9 $CASEPID
 # ===========================================================================
 
 
@@ -78,13 +79,14 @@ pkill -f -9 upstream-basic-server-unix
 # Upstream Case (Sad Path)
 echo " --> [Case: sad] Launching upstream server [basic-socket-unix]..."
 ./src/upstream-server-not-accept-unix &
+CASEPID=$!
 echo "-------------------------------"
 echo "upstream-server-not-accept-unix"
-echo "PID $!"
+echo "PID $CASEPID"
 echo "-------------------------------"
 ./traffic
 read -p "Press any key to continue"
-pkill -f -9 upstream-bad-socket-unix
+kill -9 $CASEPID
 # ===========================================================================
 
 
