@@ -41,7 +41,7 @@ and open the `report.html` file dashboard in your local browser.
 | No socket file  | No socket file                                                                      | 502 Bad Gateway                                                                                      | No upstream server exists. No socket on the host filesystem.               |
 | server-not-accept-unix | A unix domain socket server is running, but no longer will accept() new connections | Clients hang on server response until timeout, ` accept4() failed (24: Too many open files)` in logs | Unix domain socket server is established, but no connections are accepted. |
 
-### Case: Upstream server always returns HTTP 200 
+### Case 1: Upstream server always returns HTTP 200 
 
 In the case where the upstream server works as expected (happy path) we call `accept()`, and `read()` and `write()` and `close(newsockfd)` and spoof a successful HTTP 200 for every request here are the findings:
 
@@ -49,7 +49,7 @@ In the case where the upstream server works as expected (happy path) we call `ac
  - The socket state saturation from the `/proc/net/unix` file is the vast majority (90% or higher) in state `01` **SS_UNCONNECTED**.
  - Nginx will work as expected and proxy requests to/from the upstream server.
 
-### Case: Upstream server not accepting connections
+### Case 2: Upstream server not accepting connections
 
 In the case where the upstream server does not call the C function `accept()` after a socket has been established here are the findings:
 
@@ -57,13 +57,24 @@ In the case where the upstream server does not call the C function `accept()` af
  - The socket state saturation from the `/proc/net/unix` file is the vast majority (90% or higher) in state `02` **SS_CONNECTING** with the minority in state `01` **SS_UNCONNECTED**.
  - Nginx will "hang" and `curl` clients wait for a connection to be established, `curl` clients are synchronously hanging until timeout.
 
-### Case: Upstream server accepts new connections, but does not read
+### Case 3: Upstream server accepts new connections, but does not read
 
 In the case where the upstream server does call the C function `accept()` but never calls `read()` or  `write()` on the connection, nor `close()` on the file descriptor here are the findings:
 
 - Multiple lines in the `/proc/net/unix` file indicating multiple Unix sockets opened on the same socket file.
 - The socket state saturation from the `/proc/net/unix` file is the vast majority (90% or higher) in state `03` **SS_CONNECTED** with the minority in state `01` **SS_UNCONNECTED**.
 - Nginx will "hang" and `curl` clients wait for a response from the server, `curl` clients are synchronously hanging until timeout.
+
+### Case 4: Upstream server accepts new connections, reads, but does not write()
+
+In the case where the upstream server does call the C function `accept()` but never calls `read()` or  `write()` on the connection, nor `close()` on the file descriptor here are the findings:
+
+- Multiple lines in the `/proc/net/unix` file indicating multiple Unix sockets opened on the same socket file.
+- The socket state saturation from the `/proc/net/unix` file is the vast majority (90% or higher) in state `03` **SS_CONNECTED** with the minority in state `01` **SS_UNCONNECTED**.
+- Nginx will "hang" and `curl` clients wait for a response from the server, `curl` clients are synchronously hanging until timeout.
+
+Note: The output of the test indicates there is a small latency between when the socket state switches from `03` **SS_CONNECTED** to `01` **SS_UNCONNECTED** that increases in this test case when compared to case 3. During the duration between socket states, there is a sample where there is only a single line in the `/proc/net/unix` file. Presumably this occurs when the `curl` client timeouts.
+
 
 
 ### Resources

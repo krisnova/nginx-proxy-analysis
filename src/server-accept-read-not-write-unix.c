@@ -98,7 +98,14 @@ int client_addrlen = sizeof(client_addr);
       continue;
     }
 
-    // No longer read().
+    // Read from the socket
+    int valread = read(newsockfd, buffer, BUFFER_SIZE);
+    if (valread < 0) {
+      perror("webserver (read)");
+      continue;
+    }
+
+    // No longer write
 
   }
 
