@@ -52,23 +52,36 @@ Nginx memory usage remains constant when the accept queue grows, or when `SOMAXC
 
 Demonstrating memory consumption and stability with nginx is trivial, despite volatile conditions. See [ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c) for implementation detail.
 
-# Lab 
+### Observed Nginx Proxy Behavior
+
+Nginx will call `listen()` with an internal `backlog` counter for every instance of `proxy_pass` defined in a configuration. See [how nginx calls listen() in ngx_open_listening_sockets](https://github.com/nginx/nginx/blob/master/src/core/ngx_connection.c#L406-L408).
+
+For every client request, Nginx can be expected to perform the following:
+
+- Call `accept()` on the proxy socket connection for each client
+- Call `connect()` against the upstream server (asynchronous)
+- Call `write()` against the upstream server (if corresponding upstream calls `read()`)
+- Call `epoll_wait()` against the file descriptor (wait for upstream)
+- Call `close()` against the upstream socket as soon as the upstream returns, or the request times out
+    - In the event a 5XX is returned due to a faulty upstream, nginx will call `write()` against the client socket to return the 504 Gateway Timeout
+
+# Test Cases and Observations
 
 The following lab can be performed using the code in this repository. Note that running this code is relatively dangerous and should not be executed by anyone without understanding the impact on the local system.
 
-The `run-cases` script can be used to execute the following test cases.
+#### Dependencies
 
-#### Dependencies 
-
- - [GoAccess](https://goaccess.io/) installed locally to serve access dashboard.
- - [Nginx](https://www.nginx.com/) installed locally to serve as reverse proxy.
+- [GoAccess](https://goaccess.io/) installed locally to serve access dashboard.
+- [Nginx](https://www.nginx.com/) installed locally to serve as reverse proxy.
 
 ```bash 
 # Arch Linux
 yay -Sy goaccess nginx
 ```
 
-### Case 1: Upstream returns HTTP 200
+The `run-cases` script can be used to execute the following test cases, each with their own corresponding server binary found in the `/src` directory after running `make upstream`.
+
+### Case 1: Upstream always returns HTTP 200 
 
 In the case where the upstream server works as expected (happy path) we call `accept()`, and `read()` and `write()` and `close(newsockfd)` and spoof a successful HTTP 200 for every request here are the findings:
 
@@ -141,6 +154,8 @@ Below is basic reference material which has been compiled from the results and o
 Nginx doesn't spawn a process or thread for every connection. Instead, worker processes accept new requests from a shared "listen" socket and execute a highly efficient run-loop inside each worker to process thousands of connections per worker. [Source](http://www.aosabook.org/en/nginx.html).
 
 ### The "Accept Queue"
+
+Note: _The "accept queue" is sometimes referred to as "the backlog queue" as found in this [Tuning NGINX for Performance](https://www.nginx.com/blog/tuning-nginx/) guide. The term "backlog queue" corresponds to the internal counter nginx uses to limit connections in addition to the system `SOMAXCONN` kernel parameter. See [how nginx calls listen() in ngx_open_listening_sockets](https://github.com/nginx/nginx/blob/master/src/core/ngx_connection.c#L406-L408).
 
 Nginx, like any server running on top of a Linux kernel, is bound by the constraints of the kernel. 
 
@@ -249,23 +264,25 @@ Even though nginx was able to `listen()` for new connections, and a worker was a
 
 ### Lab: Demonstrate nginx memory stability 
 
-Note: See https://github.com/krisnova/nginx-proxy-analysis/issues/2 for open question on Linux loopback devices.
+Initial research shows that nginx will not allocate significant memory in the event that a request is queued in the `listen()` queue while waiting on an upstream server.
 
-First create a large file to use as a payload for the lab.
+During 100 requests each with a 1Mb payload against a known upstream that will never `accept()` a connection the only nginx worker grow from 3Mb memory consumption to 5Mb memory consumption. Where memory was read from the pid's corresponding `/proc/<pid>/status.VmSize`.
+
+First create a large file to serve as a large payload
 
 ```bash 
-# Create a ~17 Mb file
-dd if=/dev/urandom of=/tmp/payload.dat  bs=1M  count=16
+# Create a ~1 Mb file
+dd if=/dev/urandom of=/tmp/payload.dat  bs=1M  count=1
 ```
 
-Next start the nginx proxy, and a bad upstream server.
+Next start the nginx proxy, and a known faulty upstream server.
 
 ```bash 
-./proxy # Note: uncomment the strace line in ./proxy
+./proxy
 ./src/upstream-server-not-accept
 ```
 
-Next send a number of large requests to the proxy server.
+Next send large amounts of POST requests to the server with the large payload.
 
 ```bash
 for i in {1..1024}
@@ -275,7 +292,111 @@ done
 curl localhost:80/stats
 ```
 
-Memory consumption of nginx and worker threads remains constant. Strace shows no signs of memory allocation or similar system calls.
+
+Memory consumption of the main nginx process, and subsequent nested worker processes remains relatively stable.
+
+![img_1.png](img_1.png)
+
+Additionally `strace` the proxy server.
+
+```bash 
+nginx \
+  -c $(pwd)/etc/nginx.conf &
+strace -f -p $!
+```
+
+See strace logs of the above memory test which can be reasoned about as a small denial of service attack. The upstream would never `accept()` a connection simulating a busy upstream server. During the flood nginx was surprisingly efficient in managing memory consumption. Even despite a large number of `recvfrom()` system calls, no evidence of `malloc()` or similar memory allocation system calls was present.
+
+Note: This test should not be used as a way to validate that nginx will never consume memory during a flood with a busy upstream server. There are many conditions at larger scales which presumably could create this affect.
+
+<details>
+[pid 332278] writev(286, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(287)                 = 0
+[pid 332278] setsockopt(286, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970279536, u64=139748321189488}}], 512, 667) = 1
+[pid 332278] recvfrom(286, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(286)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 667) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:08 [error] 3322"..., 275) = 275
+[pid 332278] close(291)                 = 0
+[pid 332278] writev(289, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(290)                 = 0
+[pid 332278] setsockopt(289, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970280016, u64=139748321189968}}], 512, 213) = 1
+[pid 332278] recvfrom(289, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(289)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 212) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:08 [error] 3322"..., 275) = 275
+[pid 332278] close(294)                 = 0
+[pid 332278] writev(292, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(293)                 = 0
+[pid 332278] setsockopt(292, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970280496, u64=139748321190448}}], 512, 191) = 1
+[pid 332278] recvfrom(292, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(292)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 190) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:08 [error] 3322"..., 275) = 275
+[pid 332278] close(297)                 = 0
+[pid 332278] writev(295, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(296)                 = 0
+[pid 332278] setsockopt(295, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970280976, u64=139748321190928}}], 512, 230) = 1
+[pid 332278] recvfrom(295, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(295)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 229) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:08 [error] 3322"..., 275) = 275
+[pid 332278] close(300)                 = 0
+[pid 332278] writev(298, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(299)                 = 0
+[pid 332278] setsockopt(298, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970281456, u64=139748321191408}}], 512, 227) = 1
+[pid 332278] recvfrom(298, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(298)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 226) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:09 [error] 3322"..., 275) = 275
+[pid 332278] close(303)                 = 0
+[pid 332278] writev(301, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(302)                 = 0
+[pid 332278] setsockopt(301, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970281936, u64=139748321191888}}], 512, 213) = 1
+[pid 332278] recvfrom(301, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(301)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 212) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:09 [error] 3322"..., 275) = 275
+[pid 332278] close(306)                 = 0
+[pid 332278] writev(304, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(305)                 = 0
+[pid 332278] setsockopt(304, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970282416, u64=139748321192368}}], 512, 538) = 1
+[pid 332278] recvfrom(304, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(304)                 = 0
+[pid 332278] epoll_wait(8, [], 512, 536) = 0
+[pid 332278] gettid()                   = 332278
+[pid 332278] write(3, "2023/03/06 07:53:09 [error] 3322"..., 275) = 275
+[pid 332278] close(309)                 = 0
+[pid 332278] writev(307, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
+[pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
+[pid 332278] close(308)                 = 0
+[pid 332278] setsockopt(307, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+[pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970282896, u64=139748321192848}}], 512, 65000) = 1
+[pid 332278] recvfrom(307, "", 1024, 0, NULL, NULL) = 0
+[pid 332278] close(307)                 = 0
+</details>
+
+- See [ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c) for implementation detail on how nginx manages an internal memory pool.
 
 ![img_1.png](img_1.png)
 
@@ -292,4 +413,3 @@ Next run the test suite as normal and observe that **Active Connections** never 
 - [A popular tuning guide](https://www.nginx.com/blog/tuning-nginx/)
 - [Nginx buffering](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching)
 - [HTTP Server Starting Source © 2022 J.P.H. Bruins Slot](https://bruinsslot.jp/post/simple-http-webserver-in-c)
-
