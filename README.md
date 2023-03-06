@@ -287,7 +287,7 @@ Next send large amounts of POST requests to the server with the large payload.
 ```bash
 for i in {1..1024}
 do
-  curl -X POST -d /tmp/payload.dat localhost:80 &
+  curl -X POST -d @/tmp/payload.dat localhost:80 &
 done
 curl localhost:80/stats
 ```
