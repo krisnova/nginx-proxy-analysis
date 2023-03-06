@@ -29,6 +29,7 @@ compile:  ## Compile local code
 	${CC} server-not-accept-unix.c -o upstream-server-not-accept-unix
 	${CC} server-accept-not-read-unix.c -o upstream-server-accept-not-read-unix
 	${CC} server-accept-read-not-write-unix.c -o upstream-server-accept-read-not-write-unix
+	${CC} server-accept-read-write-not-close-unix.c -o upstream-server-accept-read-write-not-close-unix
 	@echo "  ->  Compile okay!"
 
 .PHONY: help

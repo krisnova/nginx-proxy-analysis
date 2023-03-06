@@ -116,6 +116,20 @@ kill -9 $CASEPID
 # ===========================================================================
 
 
+# ===========================================================================
+echo " --> Case: Server create socket, call accept(), call read(), call write() but does not call close()"
+./src/upstream-server-accept-read-write-not-close-unix &
+CASEPID=$!
+echo "-------------------------------"
+echo "upstream-server-accept-read-write-not-close-unix"
+echo "PID $CASEPID"
+echo "-------------------------------"
+./traffic
+read -p "Press any key to continue"
+kill -9 $CASEPID
+# ===========================================================================
+
+
 # Exit
 echo ""
 pkill -f -9 nginx
