@@ -15,6 +15,11 @@
 
 echo " --> Starting nginx reverse proxy"
 
+# Nginx by itself
 nginx \
-  -c $(pwd)/etc/nginx.conf &
-strace -f -p $!
+  -c $(pwd)/etc/nginx.conf
+
+# Nginx + strace
+#nginx \
+#  -c $(pwd)/etc/nginx.conf &
+#strace -f -p $!
