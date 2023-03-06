@@ -12,7 +12,7 @@ What is the default failure mode of nginx reverse proxy when a Unix domain socke
 
 At what point does the resource consumption of nginx becoming significant due to upstream socket conditions?
 
-### Control
+### Environment
 
 ```bash
 nginx/1.22.1
@@ -32,9 +32,21 @@ Run the dashboard
 ./dashboard
 ```
 
+Run the proxy
+
+````bash
+./proxy
+```
+
 and open the `report.html` file dashboard in your local browser.
 
 # Findings
+
+The Unix socket states are indicitive of internal sockets opened up via a single socket file on the filesystem. There are subject to be multiple socket instances per socket file. File descriptors exist for every connection where the upstream server calls `accept()`.
+
+In the event that the upstream server "does not return a valid HTTP response and close the file descriptor for the connection, Nginx returns a 5XX level internal server error.
+
+![img.png](img.png)
 
 ### Case 1: Upstream server always returns HTTP 200 
 
