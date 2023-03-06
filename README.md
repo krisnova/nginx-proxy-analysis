@@ -310,6 +310,7 @@ See strace logs of the above memory test which can be reasoned about as a small 
 Note: This test should not be used as a way to validate that nginx will never consume memory during a flood with a busy upstream server. There are many conditions at larger scales which presumably could create this affect.
 
 <details>
+	
 [pid 332278] writev(286, [{iov_base="HTTP/1.1 504 Gateway Time-out\r\nS"..., iov_len=162}, {iov_base="<html>\r\n<head><title>504 Gateway"..., iov_len=114}, {iov_base="<hr><center>nginx/1.22.1</center"..., iov_len=53}], 3) = 329
 [pid 332278] write(4, "127.0.0.1 - - [06/Mar/2023:07:53"..., 91) = 91
 [pid 332278] close(287)                 = 0
@@ -394,6 +395,7 @@ Note: This test should not be used as a way to validate that nginx will never co
 [pid 332278] epoll_wait(8, [{events=EPOLLIN|EPOLLOUT|EPOLLRDHUP, data={u32=2970282896, u64=139748321192848}}], 512, 65000) = 1
 [pid 332278] recvfrom(307, "", 1024, 0, NULL, NULL) = 0
 [pid 332278] close(307)                 = 0
+	
 </details>
 
 - See [ngx_palloc.c](https://github.com/nginx/nginx/blob/master/src/core/ngx_palloc.c) for implementation detail on how nginx manages an internal memory pool.
