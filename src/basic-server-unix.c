@@ -19,7 +19,7 @@
 // ██║ ╚████║╚██████╔╝ ╚████╔╝ ██║  ██║
 // ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝
 //
-// Taken from original source: https://bruinsslot.jp/post/simple-http-webserver-in-c/ © 2022 J.P.H. Bruins Slot
+// Taken from original source: /
 
 #include <arpa/inet.h>
 #include <sys/un.h>
