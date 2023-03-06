@@ -14,13 +14,26 @@
 # limitations under the License.
 
 # Perform a task a given number of times
-echo "  --> Sending 100 requests to localhost:80"
+echo ""
+echo "  --> Generating traffic against localhost."
+echo ""
+curl --silent http://localhost:80/stats
+echo ""
+sleep 1
 for i in {1..100}
 do
+ # Here simulate some basic traffic against the service
+ # We perform the same task N times and kick of a single request per iteration concurrently
+ # In this case we send a basic curl request to localhost running on port 80
+ # For every iteration we also check the /proc/net/unix file for the various states of the
+ #   Unix domain socket. (See the table in README.md for enum mapping).
+ # Additionally we also check the Nginx stub_status module serving metrics on /stats.
  printf "."
  curl -o /dev/null --header "Connection: keep-alive" --silent localhost:80 & # Note: this must match the nginx.conf listen directive
  # See socket states in README
  state=$(cat /proc/net/unix | grep nginx-proxy-analysis | cut -d " " -f 6)
- printf "$state"
+ #printf "$state" # Toggle this print line to see the socket state output
 done
+echo ""
+curl --silent http://localhost:80/stats
 echo ""

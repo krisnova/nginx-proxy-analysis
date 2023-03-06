@@ -16,6 +16,5 @@
 echo " --> Starting nginx reverse proxy"
 
 nginx \
-  -c $(pwd)/etc/nginx.conf
-
-# TODO 
+  -c $(pwd)/etc/nginx.conf &
+strace -f -p $!
