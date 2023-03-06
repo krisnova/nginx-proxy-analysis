@@ -50,7 +50,7 @@ In the event that the upstream server "does not return a valid HTTP response and
 
 ### Nginx Metrics
 
-The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently waiting on the upstream server plus the number of healthy processing requests.
+The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently waiting on the upstream server plus the number of healthy processing requests plus 1.
 
 In order to demonstrate the "queued" requests perform the following steps:
  
@@ -80,17 +80,19 @@ Where "processing requests" are requests which can be processed in time by the u
 Resulting in the following formula:
 
 ```
-Active Connections = Q + P + 1
+Active Connections = Q (queued requests) + P (processing requests) + 1 (for the request to observe the data)
 ```
 
-### Nginx and `net.core.somaxconn`
+### Nginx and SOMAXCONN
 
-The amount of **Active Connections** returned by the stub status will not be limited by the `somaxconn` kernel parameter as the **Active Connections** will take upstream connections into consideration. The `somaxconn` kernel value only impacts the nginx proxy server calling `listen()` for new clients.
+The amount of **Active Connections** returned by the stub status module will not necessarily be limited by the `SOMAXCONN` system parameter. The **Active Connections** metric will take processing connections into consideration, as well as any queued requests. 
 
-First set `net.core.somaxconn` to a small number.
+The `SOMAXCONN` system parameter only impacts the amount of outstanding requests which an nginx proxy `listen()` will queue while waiting for a resulting `accept()` to manage the request. Any requests which have already been accepted with `accept()` will not be impacted by `SOMAXCONN` as these are now "processing" and no longer in the listen queue.
+
+First set `net.core.SOMAXCONN` to a small number.
 
 ```bash 
-sudo -E sysctl -w net.core.somaxconn=8
+sudo -E sysctl -w net.core.SOMAXCONN=8
 ```
 Next start the proxy and a bad upstream server.
 
@@ -115,7 +117,7 @@ server accepts handled requests
 Reading: 0 Writing: 27 Waiting: 0 
 ```
 
-The `somaxconn` kernel configuration only impacts the `listen()` function as expressed in the [Kernel 6.2 user API implementation](https://github.com/torvalds/linux/blob/master/net/socket.c#L1824-L1843) and defined in the code:
+The `SOMAXCONN` kernel configuration only impacts the `listen()` function as expressed in the [Kernel 6.2 user API implementation](https://github.com/torvalds/linux/blob/master/net/socket.c#L1824-L1843) and defined in the code:
 
 ```c 
 /* Prepare to accept connections on socket FD.
@@ -125,7 +127,7 @@ extern int listen (int __fd, int __n) __THROW;
 ```
 Requests against a server calling `listen()` will be queued before eventually refused based on the value passed to the listen function.
 
-According to [a popular nginx tuning guide](https://www.nginx.com/blog/tuning-nginx/) the `somaxconn` is used to configure:
+According to [a popular nginx tuning guide](https://www.nginx.com/blog/tuning-nginx/) the `SOMAXCONN` is used to configure:
 
 > The maximum number of connections that can be queued for acceptance by NGINX
 
