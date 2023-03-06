@@ -50,18 +50,38 @@ In the event that the upstream server "does not return a valid HTTP response and
 
 ### Nginx Metrics
 
-The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently waiting on the upstream server.
+The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently waiting on the upstream server plus the number of healthy processing requests.
 
-In order to demonstrate the "buffered" requests perform the following steps:
+In order to demonstrate the "queued" requests perform the following steps:
  
  1. Start an nginx reverse proxy `./proxy`
  2. Start a bad upstream server `./src/upstream-server-not-accept`
  3. Send requests to the proxy server `curl localhost:80 &`
  4. Read the output of the status module `curl localhost:80/stats`
 
-See that the number of **Active Connections** represents the number of requests which are currently "hanging" and waiting for the upstream server to call `accept()` plus 1.
+Eventually all curl requests to the proxy server will time out and return **504 Gateway Timeout**.
 
-Eventually all curl requests to the proxy server will return **504 Gateway Timeout**.
+See that the number of **Active Connections** represents the number of requests which are currently "hanging" and waiting for the upstream server to call `accept()` plus the number of processing requests plus 1.
+
+Indicating that the total number of **Active Connections** can be calculated using this formula.
+
+```
+Q = Total "queued requests" ≤ SOMAXCONN
+```
+
+Where "queued requests" are upstream connections when accept() has never been called, or accept() has been called and resulting file descriptor has not been passed to close().
+
+```
+P = Total "processing requests"
+```
+
+Where "processing requests" are requests which can be processed in time by the upstream.
+
+Resulting in the following formula:
+
+```
+Active Connections = Q + P + 1
+```
 
 ### Nginx and `net.core.somaxconn`
 
