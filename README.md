@@ -11,6 +11,10 @@ A small research project aimed at understanding the behaviour of a simple nginx 
 
 The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently in the accept queue plus the number of accepted requests plus 1.
 
+
+The [worker_connections](http://nginx.org/en/docs/ngx_core_module.html#worker_connections)  nginx parameter will accurately limit the **Active Connections** metric captured by the nginx stub status module.
+
+
 ---
 
 Q = _Inbound proxy requests in the accept queue ≤ SOMAXCONN_
@@ -274,6 +278,12 @@ curl localhost:80/stats
 Memory consumption of nginx and worker threads remains constant. Strace shows no signs of memory allocation or similar system calls.
 
 ![img_1.png](img_1.png)
+
+### Lab: Demonstrate worker_connections limits active connections
+
+First set the `worker_connections` value to `2` in the `nginx.conf` file.
+
+Next run the test suite as normal and observe that **Active Connections** never exceeds the limit set.
 
 ### References
 
