@@ -7,7 +7,7 @@ A small research project aimed at understanding the behaviour of a simple nginx 
  - Linux 6.2.1
  - Linux 6.2.2
 
-### Findings
+# Findings
 
 The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently in the accept queue plus the number of accepted requests plus 1.
 
