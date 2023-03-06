@@ -34,7 +34,7 @@ Run the dashboard
 
 Run the proxy
 
-````bash
+```bash
 ./proxy
 ```
 
