@@ -1,6 +1,6 @@
 # Nginx Reverse Proxy Analysis 
 
-A small research project aimed at understanding the behaviour of a simple nginx reverse proxy given various upstream server conditions.
+A small research project aimed at understanding the behaviour of a simple nginx reverse proxy given various upstream server conditions. Specifically the relationship with a "standard" Nginx proxy and the [Socket backlog queue](https://www.linuxjournal.com/files/linuxjournal.com/linuxjournal/articles/023/2333/2333s2.html) also known as the "Accept Queue".
 
  - nginx/1.22.1
  - Linux 6.1.12
