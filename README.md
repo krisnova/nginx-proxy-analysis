@@ -9,6 +9,8 @@ A small research project aimed at understanding the behaviour of a simple nginx 
 
 # Findings
 
+Observing lines in `/proc/net/unix` with state `03` `SS_CONNECTING` is an accurate indicator of connections currently in the backlog queue between the proxy server and the upstream server.
+
 The **Active Connections** metric from the [nginx stub status module](https://nginx.org/en/docs/http/ngx_http_stub_status_module.html) is an accurate indicator of which client connections are currently in the accept queue plus the number of accepted requests plus 1.
 
 
