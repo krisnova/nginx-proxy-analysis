@@ -307,7 +307,7 @@ nginx \
 strace -f -p $!
 ```
 
-See strace logs of the above memory test which can be reasoned about as a small denial of service attack. The upstream would never `accept()` a connection simulating a busy upstream server. During the flood nginx was surprisingly efficient in managing memory consumption. Even despite a large number of `recvfrom()` system calls, no evidence of `malloc()` or similar memory allocation system calls was present.
+See strace logs of the above memory test which can be reasoned about as a small denial of service attack. The upstream would never `accept()` a connection simulating a busy upstream server. During the flood nginx was surprisingly efficient in managing memory consumption. A moderate amount of `brk(2) system calls were deteced indicating memory allocation, however the amount of memory allocation was seemingly not impacted by proxy requests with large (1Mb) and larger (10Mb+) payloads.
 
 Note: This test should not be used as a way to validate that nginx will never consume memory during a flood with a busy upstream server. There are many conditions at larger scales which presumably could create this affect.
 
