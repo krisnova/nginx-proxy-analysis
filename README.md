@@ -155,9 +155,18 @@ Below is basic reference material which has been compiled from the results and o
 
 Nginx doesn't spawn a process or thread for every connection. Instead, worker processes accept new requests from a shared "listen" socket and execute a highly efficient run-loop inside each worker to process thousands of connections per worker. [Source](http://www.aosabook.org/en/nginx.html).
 
-### The "Accept Queue"
+### The Nginx Backlog Queue
 
 Note: _The "accept queue" is sometimes referred to as "the backlog queue" as found in this [Tuning NGINX for Performance](https://www.nginx.com/blog/tuning-nginx/) guide. The term "backlog queue" corresponds to the internal counter nginx uses to limit connections in addition to the system `SOMAXCONN` kernel parameter. See [how nginx calls listen() in ngx_open_listening_sockets](https://github.com/nginx/nginx/blob/master/src/core/ngx_connection.c#L406-L408).
+
+Nginx sets a global variable `NGX_LISTEN_BACKLOG` to `511` by default. [Source](https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_linux_config.h#L111). According to the [Nginx mailing list](https://marc.info/?l=nginx&m=125423942216521&w=2) this value is for historical reasons "because 511 is a safe limit for most OSes". Note that in 2019 Google had a [patch merged](https://lore.kernel.org/netdev/20191030163620.140387-1-edumazet@google.com/) to the kernel changing the default `SOMAXCONN` value:
+
+```c
+ /* Maximum queue length specifiable by listen.  */
+-#define SOMAXCONN	128
++#define SOMAXCONN	4096
+```
+
 
 Nginx, like any server running on top of a Linux kernel, is bound by the constraints of the kernel. 
 
